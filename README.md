@@ -73,7 +73,7 @@ Atlas keeps MongoDB off your laptop, which is ideal for teams or cloud deploymen
 If you prefer to run MongoDB locally:
 
 ```bash
-docker run -d -p 27017:27017 --name mongo-chatui mongo:latest
+docker run -d -p 27017:27017 --name mongo-halawi mongo:latest
 ```
 
 Then set `MONGODB_URL=mongodb://localhost:27017` in `.env.local`. You can also supply `MONGO_STORAGE_PATH` if you want Chat UI’s fallback in-memory server to persist under a specific folder.
@@ -112,14 +112,14 @@ docker run \
 You can use a few environment variables to customize the look and feel of chat-ui. These are by default:
 
 ```env
-PUBLIC_APP_NAME=ChatUI
-PUBLIC_APP_ASSETS=chatui
+PUBLIC_APP_NAME=HALAWI
+PUBLIC_APP_ASSETS=halawi
 PUBLIC_APP_DESCRIPTION="Making the community's best AI chat models available to everyone."
 PUBLIC_APP_DATA_SHARING=
 ```
 
 - `PUBLIC_APP_NAME` The name used as a title throughout the app.
-- `PUBLIC_APP_ASSETS` Is used to find logos & favicons in `static/$PUBLIC_APP_ASSETS`, current options are `chatui` and `huggingchat`.
+- `PUBLIC_APP_ASSETS` Is used to find logos & favicons in `static/$PUBLIC_APP_ASSETS`, current options are `halawi` and `huggingchat`.
 - `PUBLIC_APP_DATA_SHARING` Can be set to 1 to add a toggle in the user settings that lets your users opt-in to data sharing with models creator.
 
 ### Models

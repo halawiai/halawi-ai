@@ -134,7 +134,7 @@
 		class="flex select-none items-center rounded-xl text-lg font-semibold"
 		href="{publicConfig.PUBLIC_ORIGIN}{base}/"
 	>
-		<Logo classNames="dark:invert mr-[2px]" />
+		<Logo classNames="size-6 dark:invert mr-[2px]" />
 		{publicConfig.PUBLIC_APP_NAME}
 	</a>
 	<a
@@ -197,21 +197,19 @@
 		>
 	</a>
 
-	{#if user?.username || user?.email}
-		<button
-			onclick={() => (showMcpModal = true)}
-			class="flex h-9 flex-none items-center gap-1.5 rounded-lg pl-2.5 pr-2 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700"
-		>
-			MCP Servers
-			{#if $enabledServersCount > 0}
-				<span
-					class="ml-auto rounded-md bg-blue-600/10 px-1.5 py-0.5 text-xs text-blue-600 dark:bg-blue-600/20 dark:text-blue-400"
-				>
-					{$enabledServersCount}
-				</span>
-			{/if}
-		</button>
-	{/if}
+	<button
+		onclick={() => (showMcpModal = true)}
+		class="flex h-9 flex-none items-center gap-1.5 rounded-lg pl-2.5 pr-2 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700"
+	>
+		MCP Servers
+		{#if $enabledServersCount > 0}
+			<span
+				class="ml-auto rounded-md bg-blue-600/10 px-1.5 py-0.5 text-xs text-blue-600 dark:bg-blue-600/20 dark:text-blue-400"
+			>
+				{$enabledServersCount}
+			</span>
+		{/if}
+	</button>
 
 	<span class="flex gap-1">
 		<a

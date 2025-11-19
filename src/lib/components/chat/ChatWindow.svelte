@@ -27,6 +27,7 @@
 	import { routerExamples } from "$lib/constants/routerExamples";
 	import type { RouterFollowUp, RouterExample } from "$lib/constants/routerExamples";
 	import { shareModal } from "$lib/stores/shareModal";
+	import ChatRouterExamples from "./ChatRouterExamples.svelte";
 	import CarbonTools from "~icons/carbon/tools";
 
 	import { fly } from "svelte/transition";
@@ -112,7 +113,7 @@
 				pastedLongContent = false;
 			}, 1000);
 			const pastedFile = new File([textContent], "Pasted Content", {
-				type: "application/vnd.chatui.clipboard",
+				type: "application/vnd.halawi.clipboard",
 			});
 
 			files = [...files, pastedFile];
@@ -425,41 +426,22 @@
 		<ScrollToBottomBtn class="fixed bottom-36 right-4 lg:right-10" scrollNode={chatContainer} />
 	</div>
 
-	<div
-		class="pointer-events-none absolute inset-x-0 bottom-0 z-0 mx-auto flex w-full
-			max-w-3xl flex-col items-center justify-center bg-gradient-to-t from-white
-			via-white/100 to-white/0 px-3.5 pt-2 dark:border-gray-800
-			dark:from-gray-900 dark:via-gray-900/100
-			dark:to-gray-900/0 max-sm:py-0 sm:px-5 md:pb-4 xl:max-w-4xl [&>*]:pointer-events-auto"
-	>
-		{#if !draft.length && !messages.length && !sources.length && !loading && currentModel.isRouter && routerExamples.length && !hideRouterExamples && !lastIsError}
-			<div
-				class="no-scrollbar mb-3 flex w-full select-none justify-start gap-2 overflow-x-auto whitespace-nowrap text-gray-400 dark:text-gray-500"
-			>
-				{#each routerExamples as ex}
-					<button
-						class="flex items-center rounded-lg bg-gray-100/90 px-2 py-0.5 text-center text-sm backdrop-blur hover:text-gray-500 dark:bg-gray-700/50 dark:hover:text-gray-400"
-						onclick={() => startExample(ex)}>{ex.title}</button
-					>
-				{/each}
-			</div>
-		{/if}
-		{#if shouldShowRouterFollowUps && !lastIsError}
-			<div
-				class="no-scrollbar mb-3 flex w-full select-none justify-start gap-2 overflow-x-auto whitespace-nowrap text-gray-400 dark:text-gray-500"
-			>
-				<!-- <span class=" text-gray-500 dark:text-gray-400">Follow ups</span> -->
-				{#each routerFollowUps as followUp}
-					<button
-						class="flex items-center gap-1 rounded-lg bg-gray-100/90 px-2 py-0.5 text-center text-sm backdrop-blur hover:text-gray-500 dark:bg-gray-700/50 dark:hover:text-gray-400"
-						onclick={() => startFollowUp(followUp)}
-					>
-						<CarbonDirectionRight class="scale-y-[-1] text-xs" />
-						{followUp.title}</button
-					>
-				{/each}
-			</div>
-		{/if}
+	<div class="chat-gradient-overlay">
+		<ChatRouterExamples
+			examples={!draft.length &&
+			!messages.length &&
+			!sources.length &&
+			!loading &&
+			currentModel.isRouter &&
+			routerExamples.length &&
+			!hideRouterExamples &&
+			!lastIsError
+				? routerExamples
+				: []}
+			followUps={shouldShowRouterFollowUps && !lastIsError ? routerFollowUps : []}
+			onExampleClick={startExample}
+			onFollowUpClick={startFollowUp}
+		/>
 		{#if sources?.length && !loading}
 			<div
 				in:fly|local={sources.length === 1 ? { y: -20, easing: cubicInOut } : undefined}

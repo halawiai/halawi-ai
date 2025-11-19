@@ -15,6 +15,12 @@ import type { Endpoint } from "../endpoints";
 import type OpenAI from "openai";
 import { createImageProcessorOptionsValidator, makeImageProcessor } from "../images";
 import { prepareMessagesWithFiles } from "$lib/server/textGeneration/utils/prepareFiles";
+import { logger } from "$lib/server/logger";
+import {
+	isGroqRegionalEndpoint,
+	getGroqGlobalEndpoint,
+	isToolChoiceRequiredError,
+} from "$lib/server/utils/groqEndpointFallback";
 // uuid import removed (no tool call ids)
 
 export const endpointOAIParametersSchema = z.object({
@@ -101,9 +107,19 @@ export async function endpointOai(
 		return response;
 	};
 
+	// Convert regional Groq endpoints to global endpoint upfront
+	const currentBaseURL = isGroqRegionalEndpoint(baseURL) ? getGroqGlobalEndpoint(baseURL) : baseURL;
+
+	if (isGroqRegionalEndpoint(baseURL)) {
+		logger.info(
+			{ original: baseURL, converted: currentBaseURL },
+			"[endpointOai] Converting regional Groq endpoint to global endpoint"
+		);
+	}
+
 	const openai = new OpenAI({
 		apiKey: apiKey || "sk-",
-		baseURL,
+		baseURL: currentBaseURL,
 		defaultHeaders: {
 			...(config.PUBLIC_APP_NAME === "HuggingChat" && { "User-Agent": "huggingchat" }),
 			...defaultHeaders,
@@ -145,7 +161,7 @@ export async function endpointOai(
 			const openAICompletion = await openai.completions.create(body, {
 				body: { ...body, ...extraBody },
 				headers: {
-					"ChatUI-Conversation-ID": conversationId?.toString() ?? "",
+					"HALAWI-Conversation-ID": conversationId?.toString() ?? "",
 					"X-use-cache": "false",
 					...(locals?.token ? { Authorization: `Bearer ${locals.token}` } : {}),
 				},
@@ -193,50 +209,140 @@ export async function endpointOai(
 
 			// Combine model defaults with request-specific parameters
 			const parameters = { ...model.parameters, ...generateSettings };
+			const modelId = model.id ?? model.name;
+
+			// Enable browser search and code execution for OSS models matching the openai/gpt-oss-* namespace pattern
+			// This strict prefix match ensures only intended OSS models enable these tools
+			const isOssModel = typeof modelId === "string" && modelId.startsWith("openai/gpt-oss-");
+			// browser_search and code_interpreter are Groq-specific tool types, so we use type assertion for compatibility
+			const tools = isOssModel
+				? ([
+						{ type: "browser_search" },
+						{ type: "code_interpreter" },
+					] as unknown as OpenAI.Chat.Completions.ChatCompletionTool[])
+				: undefined;
+			// Use "auto" to let the model decide when to use tools, avoiding parse errors from forced tool usage
+			// The model will intelligently use code execution when needed
+			const toolChoice = isOssModel ? ("auto" as const) : undefined;
+
+			// Build base body, ensuring tool_choice from extraBody doesn't override our setting
+			const baseBody: ChatCompletionCreateParamsStreaming | ChatCompletionCreateParamsNonStreaming =
+				{
+					model: modelId,
+					messages: messagesOpenAI,
+					...(streamingSupported ? { stream: true as const } : { stream: false }),
+					// Support two different ways of specifying token limits depending on the model
+					...(useCompletionTokens
+						? { max_completion_tokens: parameters?.max_tokens }
+						: { max_tokens: parameters?.max_tokens }),
+					stop: parameters?.stop,
+					temperature: parameters?.temperature,
+					top_p: parameters?.top_p,
+					frequency_penalty: parameters?.frequency_penalty,
+					presence_penalty: parameters?.presence_penalty,
+					...(tools ? { tools } : {}),
+					...(toolChoice ? { tool_choice: toolChoice } : {}),
+				};
+
+			// Merge extraBody but ensure our tool_choice setting takes precedence
 			const body = {
-				model: model.id ?? model.name,
-				messages: messagesOpenAI,
-				stream: streamingSupported,
-				// Support two different ways of specifying token limits depending on the model
-				...(useCompletionTokens
-					? { max_completion_tokens: parameters?.max_tokens }
-					: { max_tokens: parameters?.max_tokens }),
-				stop: parameters?.stop,
-				temperature: parameters?.temperature,
-				top_p: parameters?.top_p,
-				frequency_penalty: parameters?.frequency_penalty,
-				presence_penalty: parameters?.presence_penalty,
-			};
+				...baseBody,
+				...extraBody,
+				// Ensure our tool_choice setting is not overridden by extraBody
+				...(toolChoice ? { tool_choice: toolChoice } : {}),
+			} as ChatCompletionCreateParamsStreaming | ChatCompletionCreateParamsNonStreaming;
 
 			// Handle both streaming and non-streaming responses with appropriate processors
 			if (streamingSupported) {
-				const openChatAICompletion = await openai.chat.completions.create(
-					body as ChatCompletionCreateParamsStreaming,
-					{
-						body: { ...body, ...extraBody },
-						headers: {
-							"ChatUI-Conversation-ID": conversationId?.toString() ?? "",
-							"X-use-cache": "false",
-							...(locals?.token ? { Authorization: `Bearer ${locals.token}` } : {}),
-						},
-						signal: abortSignal,
+				try {
+					const openChatAICompletion = await openai.chat.completions.create(
+						body as ChatCompletionCreateParamsStreaming,
+						{
+							body: { ...body, ...extraBody },
+							headers: {
+								"HALAWI-Conversation-ID": conversationId?.toString() ?? "",
+								"X-use-cache": "false",
+								...(locals?.token ? { Authorization: `Bearer ${locals.token}` } : {}),
+							},
+							signal: abortSignal,
+						}
+					);
+					return openAIChatToTextGenerationStream(openChatAICompletion, () => routerMetadata);
+				} catch (error) {
+					// Handle tool_choice required errors by retrying with "auto"
+					if (isToolChoiceRequiredError(error)) {
+						logger.warn(
+							{ model: modelId, error: String(error) },
+							"[endpointOai] Tool choice required error, retrying with tool_choice: auto"
+						);
+						// Remove tool_choice from extraBody if present, then set to "auto"
+						// eslint-disable-next-line @typescript-eslint/no-unused-vars
+						const { tool_choice, ...extraBodyWithoutToolChoice } = extraBody || {};
+						const bodyWithAutoToolChoice = {
+							...body,
+							tool_choice: "auto" as const,
+						};
+						const openChatAICompletion = await openai.chat.completions.create(
+							bodyWithAutoToolChoice as ChatCompletionCreateParamsStreaming,
+							{
+								body: { ...bodyWithAutoToolChoice, ...extraBodyWithoutToolChoice },
+								headers: {
+									"HALAWI-Conversation-ID": conversationId?.toString() ?? "",
+									"X-use-cache": "false",
+									...(locals?.token ? { Authorization: `Bearer ${locals.token}` } : {}),
+								},
+								signal: abortSignal,
+							}
+						);
+						return openAIChatToTextGenerationStream(openChatAICompletion, () => routerMetadata);
 					}
-				);
-				return openAIChatToTextGenerationStream(openChatAICompletion, () => routerMetadata);
+					throw error;
+				}
 			} else {
-				const openChatAICompletion = await openai.chat.completions.create(
-					body as ChatCompletionCreateParamsNonStreaming,
-					{
-						body: { ...body, ...extraBody },
-						headers: {
-							"ChatUI-Conversation-ID": conversationId?.toString() ?? "",
-							"X-use-cache": "false",
-							...(locals?.token ? { Authorization: `Bearer ${locals.token}` } : {}),
-						},
-						signal: abortSignal,
+				try {
+					const openChatAICompletion = await openai.chat.completions.create(
+						body as ChatCompletionCreateParamsNonStreaming,
+						{
+							body: { ...body, ...extraBody },
+							headers: {
+								"HALAWI-Conversation-ID": conversationId?.toString() ?? "",
+								"X-use-cache": "false",
+								...(locals?.token ? { Authorization: `Bearer ${locals.token}` } : {}),
+							},
+							signal: abortSignal,
+						}
+					);
+					return openAIChatToTextGenerationSingle(openChatAICompletion, () => routerMetadata);
+				} catch (error) {
+					// Handle tool_choice required errors by retrying with "auto"
+					if (isToolChoiceRequiredError(error)) {
+						logger.warn(
+							{ model: modelId, error: String(error) },
+							"[endpointOai] Tool choice required error, retrying with tool_choice: auto"
+						);
+						// Remove tool_choice from extraBody if present, then set to "auto"
+						// eslint-disable-next-line @typescript-eslint/no-unused-vars
+						const { tool_choice, ...extraBodyWithoutToolChoice } = extraBody || {};
+						const bodyWithAutoToolChoice = {
+							...body,
+							tool_choice: "auto" as const,
+						};
+						const openChatAICompletion = await openai.chat.completions.create(
+							bodyWithAutoToolChoice as ChatCompletionCreateParamsNonStreaming,
+							{
+								body: { ...bodyWithAutoToolChoice, ...extraBodyWithoutToolChoice },
+								headers: {
+									"HALAWI-Conversation-ID": conversationId?.toString() ?? "",
+									"X-use-cache": "false",
+									...(locals?.token ? { Authorization: `Bearer ${locals.token}` } : {}),
+								},
+								signal: abortSignal,
+							}
+						);
+						return openAIChatToTextGenerationSingle(openChatAICompletion, () => routerMetadata);
 					}
-				);
-				return openAIChatToTextGenerationSingle(openChatAICompletion, () => routerMetadata);
+					throw error;
+				}
 			}
 		};
 	} else {

@@ -404,7 +404,7 @@ export async function* runMcpFlow({
 				{
 					signal: abortSignal,
 					headers: {
-						"ChatUI-Conversation-ID": conv._id.toString(),
+						"HALAWI-Conversation-ID": conv._id.toString(),
 						"X-use-cache": "false",
 						...(locals?.token ? { Authorization: `Bearer ${locals.token}` } : {}),
 					},
@@ -539,7 +539,7 @@ export async function* runMcpFlow({
 						{
 							signal: abortSignal,
 							headers: {
-								"ChatUI-Conversation-ID": conv._id.toString(),
+								"HALAWI-Conversation-ID": conv._id.toString(),
 								"X-use-cache": "false",
 								...(locals?.token ? { Authorization: `Bearer ${locals.token}` } : {}),
 							},

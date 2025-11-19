@@ -1,0 +1,16 @@
+<svg width="32" height="32" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Simple Green H Logo (dev mode) -->
+  <rect width="200" height="200" rx="20" fill="#FFF9C4"/>
+  
+  <!-- Left vertical bar -->
+  <rect x="50" y="40" width="28" height="120" rx="14" fill="#F57C00"/>
+  
+  <!-- Horizontal bar -->
+  <rect x="78" y="86" width="44" height="28" rx="14" fill="#F57C00"/>
+  
+  <!-- Right vertical bar -->
+  <rect x="122" y="40" width="28" height="120" rx="14" fill="#F57C00"/>
+  
+  <!-- Dev indicator dot -->
+  <circle cx="170" cy="30" r="12" fill="#F57C00"/>
+</svg>

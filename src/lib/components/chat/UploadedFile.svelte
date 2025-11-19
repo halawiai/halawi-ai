@@ -58,7 +58,7 @@
 	}
 
 	const isPlainText = (mime: string) =>
-		mime === "application/vnd.chatui.clipboard" || matchesAllowed(mime, TEXT_MIME_ALLOWLIST);
+		mime === "application/vnd.halawi.clipboard" || matchesAllowed(mime, TEXT_MIME_ALLOWLIST);
 
 	let isClickable = $derived(isImage(file.mime) || isPlainText(file.mime));
 </script>
@@ -87,7 +87,7 @@
 					<CarbonDocument />
 					<h3 class="text-lg font-semibold">{file.name}</h3>
 				</div>
-				{#if file.mime === "application/vnd.chatui.clipboard"}
+					{#if file.mime === "application/vnd.halawi.clipboard"}
 					<p class="text-sm text-gray-500">
 						If you prefer to inject clipboard content directly in the chat, you can disable this
 						feature in the
@@ -109,17 +109,17 @@
 						<pre
 							class="w-full whitespace-pre-wrap break-words pt-0 text-xs"
 							class:font-sans={file.mime === "text/plain" ||
-								file.mime === "application/vnd.chatui.clipboard"}
+								file.mime === "application/vnd.halawi.clipboard"}
 							class:font-mono={file.mime !== "text/plain" &&
-								file.mime !== "application/vnd.chatui.clipboard"}>{result}</pre>
+								file.mime !== "application/vnd.halawi.clipboard"}>{result}</pre>
 					{/await}
 				{:else}
 					<pre
 						class="w-full whitespace-pre-wrap break-words pt-0 text-xs"
 						class:font-sans={file.mime === "text/plain" ||
-							file.mime === "application/vnd.chatui.clipboard"}
+							file.mime === "application/vnd.halawi.clipboard"}
 						class:font-mono={file.mime !== "text/plain" &&
-							file.mime !== "application/vnd.chatui.clipboard"}>{atob(file.value)}</pre>
+							file.mime !== "application/vnd.halawi.clipboard"}>{atob(file.value)}</pre>
 				{/if}
 			</div>
 		{/if}
@@ -184,7 +184,7 @@
 					<dd class="text-sm">
 						{truncateMiddle(file.name, 28)}
 					</dd>
-					{#if file.mime === "application/vnd.chatui.clipboard"}
+					{#if file.mime === "application/vnd.halawi.clipboard"}
 						<dt class="text-xs text-gray-400">Clipboard source</dt>
 					{:else}
 						<dt class="text-xs text-gray-400">{file.mime}</dt>

@@ -6,6 +6,7 @@ import endpoints, { endpointSchema, type Endpoint } from "./endpoints/endpoints"
 import JSON5 from "json5";
 import { logger } from "$lib/server/logger";
 import { makeRouterEndpoint } from "$lib/server/router/endpoint";
+import { isGroqRegionalEndpoint, getGroqGlobalEndpoint } from "./utils/groqEndpointFallback";
 
 type Optional<T, K extends keyof T> = Pick<Partial<T>, K> & Omit<T, K>;
 
@@ -251,6 +252,19 @@ const applyModelState = (newModels: ProcessedModel[], startedAt: number): Models
 	const refreshedAt = new Date();
 	const durationMs = Date.now() - startedAt;
 
+	// Prioritize "openai/gpt-oss-120b" as the default model
+	const preferredModelId = "openai/gpt-oss-120b";
+	const preferredModelIndex = newModels.findIndex(
+		(m) => m.id === preferredModelId || m.name === preferredModelId
+	);
+
+	if (preferredModelIndex > 0) {
+		// Move preferred model to the front
+		const preferredModel = newModels[preferredModelIndex];
+		newModels.splice(preferredModelIndex, 1);
+		newModels.unshift(preferredModel);
+	}
+
 	models = newModels;
 	defaultModel = models[0];
 	taskModel = resolveTaskModel(models);
@@ -294,8 +308,9 @@ const applyModelState = (newModels: ProcessedModel[], startedAt: number): Models
 	return summary;
 };
 
-const buildModels = async (): Promise<ProcessedModel[]> => {
-	if (!openaiBaseUrl) {
+const buildModels = async (baseUrlOverride?: string): Promise<ProcessedModel[]> => {
+	const effectiveBaseUrl = baseUrlOverride ?? openaiBaseUrl;
+	if (!effectiveBaseUrl) {
 		logger.error(
 			"OPENAI_BASE_URL is required. Set it to an OpenAI-compatible base (e.g., https://router.huggingface.co/v1)."
 		);
@@ -303,7 +318,18 @@ const buildModels = async (): Promise<ProcessedModel[]> => {
 	}
 
 	try {
-		const baseURL = openaiBaseUrl;
+		// Convert regional Groq endpoints to global endpoint upfront
+		const baseURL = isGroqRegionalEndpoint(effectiveBaseUrl)
+			? getGroqGlobalEndpoint(effectiveBaseUrl)
+			: effectiveBaseUrl;
+
+		if (isGroqRegionalEndpoint(effectiveBaseUrl)) {
+			logger.info(
+				{ original: effectiveBaseUrl, converted: baseURL },
+				"[models] Converting regional Groq endpoint to global endpoint"
+			);
+		}
+
 		logger.info({ baseURL }, "[models] Using OpenAI-compatible base URL");
 
 		// Canonical auth token is OPENAI_API_KEY; keep HF_TOKEN as legacy alias
@@ -314,7 +340,8 @@ const buildModels = async (): Promise<ProcessedModel[]> => {
 		const response = await fetch(`${baseURL}/models`, {
 			headers: authToken ? { Authorization: `Bearer ${authToken}` } : undefined,
 		});
-		logger.info({ status: response.status }, "[models] First fetch status");
+		logger.info({ status: response.status }, "[models] Fetch status");
+
 		if (!response.ok && response.status === 401 && !authToken) {
 			// If we get 401 and didn't have a token, there's nothing we can do
 			throw new Error(
@@ -428,7 +455,7 @@ const buildModels = async (): Promise<ProcessedModel[]> => {
 				endpoints: [
 					{
 						type: "openai" as const,
-						baseURL: openaiBaseUrl,
+						baseURL: effectiveBaseUrl,
 					},
 				],
 				// Keep the alias visible

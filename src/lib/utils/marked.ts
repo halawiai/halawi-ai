@@ -139,6 +139,26 @@ function escapeHTML(content: string) {
 	);
 }
 
+/**
+ * Parse citation patterns like 【3+L12-L22】 or 【3†L12-L22】 and convert them to [3] format
+ * that can be handled by addInlineCitations. The optional line range (L12-L22) is captured
+ * by the regex but currently discarded in the replacement.
+ */
+function parseCitationPatterns(md: string): string {
+	// Match patterns like 【3+L12-L22】 or 【3†L12-L22】 or 【3】
+	// Full-width brackets: 【 (U+3010) and 】 (U+3011)
+	// Also handle the dagger symbol (†) that might appear
+	// Note: The regex captures an optional line-range (lineRange), but it is currently ignored/discarded
+	const citationPattern = /【(\d+)(?:[+†](L\d+(?:-L\d+)?))?】/g;
+
+	return md.replace(citationPattern, (match, sourceNum, _lineRange) => {
+		// Convert to standard citation format [number]
+		// The lineRange parameter is captured but not used - it's intentionally discarded
+		// If needed in the future, we could add it as a title attribute to the citation link
+		return `[${sourceNum}]`;
+	});
+}
+
 function addInlineCitations(md: string, webSearchSources: SimpleSource[] = []): string {
 	const linkStyle =
 		"color: rgb(59, 130, 246); text-decoration: none; hover:text-decoration: underline;";
@@ -202,7 +222,10 @@ type TextToken = {
 
 export async function processTokens(content: string, sources: SimpleSource[]): Promise<Token[]> {
 	// Apply incomplete markdown preprocessing for smooth streaming
-	const processedContent = parseIncompleteMarkdown(content);
+	let processedContent = parseIncompleteMarkdown(content);
+
+	// Parse citation patterns like 【3+L12-L22】 before markdown processing
+	processedContent = parseCitationPatterns(processedContent);
 
 	const marked = createMarkedInstance(sources);
 	const tokens = marked.lexer(processedContent);
@@ -231,7 +254,10 @@ export async function processTokens(content: string, sources: SimpleSource[]): P
 
 export function processTokensSync(content: string, sources: SimpleSource[]): Token[] {
 	// Apply incomplete markdown preprocessing for smooth streaming
-	const processedContent = parseIncompleteMarkdown(content);
+	let processedContent = parseIncompleteMarkdown(content);
+
+	// Parse citation patterns like 【3+L12-L22】 before markdown processing
+	processedContent = parseCitationPatterns(processedContent);
 
 	const marked = createMarkedInstance(sources);
 	const tokens = marked.lexer(processedContent);
