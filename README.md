@@ -1,8 +1,6 @@
-# Chat UI
+# Halawi AI Chat UI
 
-![Chat UI repository thumbnail](https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/chat-ui/chat-ui-2026.png)
-
-A chat interface for LLMs. It is a SvelteKit app and it powers the [HuggingChat app on hf.co/chat](https://huggingface.co/chat).
+A chat interface for LLMs. It is a SvelteKit app powered by Hala and designed for the Halawi AI platform.
 
 0. [Quickstart](#quickstart)
 1. [Database Options](#database-options)
@@ -12,20 +10,20 @@ A chat interface for LLMs. It is a SvelteKit app and it powers the [HuggingChat 
 5. [Building](#building)
 
 > [!NOTE]
-> Chat UI only supports OpenAI-compatible APIs via `OPENAI_BASE_URL` and the `/models` endpoint. Provider-specific integrations (legacy `MODELS` env var, GGUF discovery, embeddings, web-search helpers, etc.) are removed, but any service that speaks the OpenAI protocol (llama.cpp server, Ollama, OpenRouter, etc. will work by default).
+> Halawi AI Chat UI only supports OpenAI-compatible APIs via `OPENAI_BASE_URL` and the `/models` endpoint. Provider-specific integrations (legacy `MODELS` env var, GGUF discovery, embeddings, web-search helpers, etc.) are removed, but any service that speaks the OpenAI protocol (llama.cpp server, Ollama, OpenRouter, etc. will work by default).
 
 > [!NOTE]
-> The old version is still available on the [legacy branch](https://github.com/huggingface/chat-ui/tree/legacy)
+> This is the Halawi AI chat interface, built on top of the open-source Chat UI framework.
 
 ## Quickstart
 
-Chat UI speaks to OpenAI-compatible APIs only. The fastest way to get running is with the Hugging Face Inference Providers router plus your personal Hugging Face access token.
+Halawi AI Chat UI speaks to OpenAI-compatible APIs only. Configure your preferred provider and get started quickly.
 
 **Step 1 – Create `.env.local`:**
 
 ```env
-OPENAI_BASE_URL=https://router.huggingface.co/v1
-OPENAI_API_KEY=hf_************************
+OPENAI_BASE_URL=https://api.openai.com/v1
+OPENAI_API_KEY=sk_************************
 # Fill in once you pick a database option below
 MONGODB_URL=
 ```
@@ -34,11 +32,12 @@ MONGODB_URL=
 
 | Provider                                      | Example `OPENAI_BASE_URL`          | Example key env                                                         |
 | --------------------------------------------- | ---------------------------------- | ----------------------------------------------------------------------- |
-| Hugging Face Inference Providers router       | `https://router.huggingface.co/v1` | `OPENAI_API_KEY=hf_xxx` (or `HF_TOKEN` legacy alias)                    |
+| OpenAI                                        | `https://api.openai.com/v1`        | `OPENAI_API_KEY=sk-xxx`                                                  |
 | llama.cpp server (`llama.cpp --server --api`) | `http://127.0.0.1:8080/v1`         | `OPENAI_API_KEY=sk-local-demo` (any string works; llama.cpp ignores it) |
 | Ollama (with OpenAI-compatible bridge)        | `http://127.0.0.1:11434/v1`        | `OPENAI_API_KEY=ollama`                                                 |
 | OpenRouter                                    | `https://openrouter.ai/api/v1`     | `OPENAI_API_KEY=sk-or-v1-...`                                           |
 | Poe                                           | `https://api.poe.com/v1`           | `OPENAI_API_KEY=pk_...`                                                 |
+| Custom Hala/Halawi endpoint                   | `https://your-endpoint.com/v1`     | `OPENAI_API_KEY=your-key`                                               |
 
 Check the root [`.env` template](./.env) for the full list of optional variables you can override.
 
@@ -47,24 +46,24 @@ Check the root [`.env` template](./.env) for the full list of optional variables
 **Step 3 – Install and launch the dev server:**
 
 ```bash
-git clone https://github.com/huggingface/chat-ui
-cd chat-ui
+git clone https://github.com/halawiai/halawi-ai.git
+cd halawi-ai
 npm install
 npm run dev -- --open
 ```
 
-You now have Chat UI running against the Hugging Face router without needing to host MongoDB yourself.
+You now have Halawi AI Chat UI running and ready to connect to your configured API endpoint.
 
 ## Database Options
 
-Chat history, users, settings, files, and stats all live in MongoDB. You can point Chat UI at any MongoDB 6/7 deployment.
+Chat history, users, settings, files, and stats all live in MongoDB. You can point Halawi AI Chat UI at any MongoDB 6/7 deployment.
 
 ### MongoDB Atlas (managed)
 
 1. Create a free cluster at [mongodb.com](https://www.mongodb.com/pricing).
 2. Add your IP (or `0.0.0.0/0` for development) to the network access list.
 3. Create a database user and copy the connection string.
-4. Paste that string into `MONGODB_URL` in `.env.local`. Keep the default `MONGODB_DB_NAME=chat-ui` or change it per environment.
+4. Paste that string into `MONGODB_URL` in `.env.local`. Keep the default `MONGODB_DB_NAME=halawi-ai` or change it per environment.
 
 Atlas keeps MongoDB off your laptop, which is ideal for teams or cloud deployments.
 
@@ -76,11 +75,11 @@ If you prefer to run MongoDB locally:
 docker run -d -p 27017:27017 --name mongo-halawi mongo:latest
 ```
 
-Then set `MONGODB_URL=mongodb://localhost:27017` in `.env.local`. You can also supply `MONGO_STORAGE_PATH` if you want Chat UI’s fallback in-memory server to persist under a specific folder.
+Then set `MONGODB_URL=mongodb://localhost:27017` in `.env.local`. You can also supply `MONGO_STORAGE_PATH` if you want Halawi AI Chat UI's fallback in-memory server to persist under a specific folder.
 
 ## Launch
 
-After configuring your environment variables, start Chat UI with:
+After configuring your environment variables, start Halawi AI Chat UI with:
 
 ```bash
 npm install
@@ -88,6 +87,10 @@ npm run dev
 ```
 
 The dev server listens on `http://localhost:5173` by default. Use `npm run build` / `npm run preview` for production builds.
+
+## About Halawi AI
+
+Halawi AI is a chat interface platform built by Hala, designed to make AI conversations accessible and powerful. This Chat UI provides a modern, feature-rich interface for interacting with various LLM providers through OpenAI-compatible APIs.
 
 ## Optional Docker Image
 
@@ -97,10 +100,10 @@ Prefer containerized setup? You can run everything in one container as long as y
 docker run \
   -p 3000 \
   -e MONGODB_URL=mongodb://host.docker.internal:27017 \
-  -e OPENAI_BASE_URL=https://router.huggingface.co/v1 \
-  -e OPENAI_API_KEY=hf_*** \
+  -e OPENAI_BASE_URL=https://api.openai.com/v1 \
+  -e OPENAI_API_KEY=sk-*** \
   -v db:/data \
-  ghcr.io/huggingface/chat-ui-db:latest
+  halawiai/halawi-ai:latest
 ```
 
 `host.docker.internal` lets the container reach a MongoDB instance on your host machine; swap it for your Atlas URI if you use the hosted option. All environment variables accepted in `.env.local` can be provided as `-e` flags.
@@ -118,17 +121,17 @@ PUBLIC_APP_DESCRIPTION="Making the community's best AI chat models available to 
 PUBLIC_APP_DATA_SHARING=
 ```
 
-- `PUBLIC_APP_NAME` The name used as a title throughout the app.
-- `PUBLIC_APP_ASSETS` Is used to find logos & favicons in `static/$PUBLIC_APP_ASSETS`, current options are `halawi` and `huggingchat`.
+- `PUBLIC_APP_NAME` The name used as a title throughout the app (default: `HALAWI`).
+- `PUBLIC_APP_ASSETS` Is used to find logos & favicons in `static/$PUBLIC_APP_ASSETS`, current option is `halawi`.
 - `PUBLIC_APP_DATA_SHARING` Can be set to 1 to add a toggle in the user settings that lets your users opt-in to data sharing with models creator.
 
 ### Models
 
-This build does not use the `MODELS` env var or GGUF discovery. Configure models via `OPENAI_BASE_URL` only; Chat UI will fetch `${OPENAI_BASE_URL}/models` and populate the list automatically. Authorization uses `OPENAI_API_KEY` (preferred). `HF_TOKEN` remains a legacy alias.
+This build does not use the `MODELS` env var or GGUF discovery. Configure models via `OPENAI_BASE_URL` only; Halawi AI Chat UI will fetch `${OPENAI_BASE_URL}/models` and populate the list automatically. Authorization uses `OPENAI_API_KEY`.
 
 ### LLM Router (Optional)
 
-Chat UI can perform client-side routing [katanemo/Arch-Router-1.5B](https://huggingface.co/katanemo/Arch-Router-1.5B) as the routing model without running a separate router service. The UI exposes a virtual model alias called "Omni" (configurable) that, when selected, chooses the best route/model for each message.
+Halawi AI Chat UI can perform client-side routing using Arch-Router models as the routing model without running a separate router service. The UI exposes a virtual model alias called "Omni" (configurable) that, when selected, chooses the best route/model for each message.
 
 - Provide a routes policy JSON via `LLM_ROUTER_ROUTES_PATH`. No sample file ships with this branch, so you must point the variable to a JSON array you create yourself (for example, commit one in your project like `config/routes.chat.json`). Each route entry needs `name`, `description`, `primary_model`, and optional `fallback_models`.
 - Configure the Arch router selection endpoint with `LLM_ROUTER_ARCH_BASE_URL` (OpenAI-compatible `/chat/completions`) and `LLM_ROUTER_ARCH_MODEL` (e.g. `router/omni`). The Arch call reuses `OPENAI_API_KEY` for auth.
@@ -136,7 +139,7 @@ Chat UI can perform client-side routing [katanemo/Arch-Router-1.5B](https://hugg
 - Selection timeout can be tuned via `LLM_ROUTER_ARCH_TIMEOUT_MS` (default 10000).
 - Omni alias configuration: `PUBLIC_LLM_ROUTER_ALIAS_ID` (default `omni`), `PUBLIC_LLM_ROUTER_DISPLAY_NAME` (default `Omni`), and optional `PUBLIC_LLM_ROUTER_LOGO_URL`.
 
-When you select Omni in the UI, Chat UI will:
+When you select Omni in the UI, Halawi AI Chat UI will:
 
 - Call the Arch endpoint once (non-streaming) to pick the best route for the last turns.
 - Emit RouterMetadata immediately (route and actual model used) so the UI can display it.
@@ -149,7 +152,7 @@ Tool and multimodal shortcuts:
 
 ### MCP Tools (Optional)
 
-Chat UI can call tools exposed by Model Context Protocol (MCP) servers and feed results back to the model using OpenAI function calling. You can preconfigure trusted servers via env, let users add their own, and optionally have the Omni router auto‑select a tools‑capable model.
+Halawi AI Chat UI can call tools exposed by Model Context Protocol (MCP) servers and feed results back to the model using OpenAI function calling. You can preconfigure trusted servers via env, let users add their own, and optionally have the Omni router auto‑select a tools‑capable model.
 
 Configure servers (base list for all users):
 
@@ -157,18 +160,17 @@ Configure servers (base list for all users):
 # JSON array of servers: name, url, optional headers
 MCP_SERVERS=[
   {"name": "Web Search (Exa)", "url": "https://mcp.exa.ai/mcp"},
-  {"name": "Hugging Face MCP Login", "url": "https://hf.co/mcp?login"}
+  {"name": "Custom MCP Server", "url": "https://your-mcp-server.com/mcp"}
 ]
 
-# Forward the signed-in user's Hugging Face token to the official HF MCP login endpoint
-# when no Authorization header is set on that server entry.
-MCP_FORWARD_HF_USER_TOKEN=true
+# Configure custom authentication headers for MCP servers if needed
+# MCP_AUTH_HEADERS={"Authorization": "Bearer your-token"}
 ```
 
 Enable router tool path (Omni):
 
 - Set `LLM_ROUTER_ENABLE_TOOLS=true` and choose a tools‑capable target with `LLM_ROUTER_TOOLS_MODEL=<model id or name>`.
-- The target must support OpenAI tools/function calling. Chat UI surfaces a “tools” badge on models that advertise this; you can also force‑enable it per‑model in settings (see below).
+- The target must support OpenAI tools/function calling. Halawi AI Chat UI surfaces a "tools" badge on models that advertise this; you can also force‑enable it per‑model in settings (see below).
 
 Use tools in the UI:
 
