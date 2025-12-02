@@ -1,0 +1,112 @@
+# Example: Feature Config to restrict to Groq models only
+# Add this to your chart/env/dev.yaml or chart/env/prod.yaml under envVars:
+
+FEATURE_CONFIG: >
+  {
+    "groq": {
+      "enabled": true,
+      "models": {
+        "openai/gpt-oss-120b": true,
+        "openai/gpt-oss-20b": true,
+        "llama-3.3-70b-versatile": true,
+        "llama-3.1-8b-instant": true,
+        "qwen/qwen3-32b": true,
+        "moonshotai/kimi-k2-instruct-0905": true,
+        "meta-llama/llama-4-maverick-17b-128e-instruct": true,
+        "meta-llama/llama-4-scout-17b-16e-instruct": true,
+        "whisper-large-v3": true,
+        "whisper-large-v3-turbo": true
+      }
+    },
+    "openai": {
+      "enabled": false,
+      "models": {}
+    },
+    "huggingface": {
+      "enabled": false,
+      "models": {}
+    },
+    "together": {
+      "enabled": false,
+      "models": {}
+    },
+    "fireworks": {
+      "enabled": false,
+      "models": {}
+    },
+    "anyscale": {
+      "enabled": false,
+      "models": {}
+    },
+    "perplexity": {
+      "enabled": false,
+      "models": {}
+    },
+    "knowledgeBase": {
+      "enabled": false,
+      "allowSync": false
+    },
+    "modelCapabilities": {
+      "openai/gpt-oss-120b": {
+        "webSearch": true,
+        "codeInterpreter": true,
+        "vision": false,
+        "audio": false
+      },
+      "openai/gpt-oss-20b": {
+        "webSearch": true,
+        "codeInterpreter": true,
+        "vision": false,
+        "audio": false
+      },
+      "llama-3.3-70b-versatile": {
+        "webSearch": false,
+        "codeInterpreter": false,
+        "vision": false,
+        "audio": false
+      },
+      "llama-3.1-8b-instant": {
+        "webSearch": false,
+        "codeInterpreter": false,
+        "vision": false,
+        "audio": false
+      },
+      "qwen/qwen3-32b": {
+        "webSearch": false,
+        "codeInterpreter": false,
+        "vision": false,
+        "audio": false
+      },
+      "moonshotai/kimi-k2-instruct-0905": {
+        "webSearch": false,
+        "codeInterpreter": false,
+        "vision": false,
+        "audio": false
+      },
+      "meta-llama/llama-4-maverick-17b-128e-instruct": {
+        "webSearch": false,
+        "codeInterpreter": false,
+        "vision": true,
+        "audio": false
+      },
+      "meta-llama/llama-4-scout-17b-16e-instruct": {
+        "webSearch": false,
+        "codeInterpreter": false,
+        "vision": true,
+        "audio": false
+      },
+      "whisper-large-v3": {
+        "webSearch": false,
+        "codeInterpreter": false,
+        "vision": false,
+        "audio": true
+      },
+      "whisper-large-v3-turbo": {
+        "webSearch": false,
+        "codeInterpreter": false,
+        "vision": false,
+        "audio": true
+      }
+    }
+  }
+

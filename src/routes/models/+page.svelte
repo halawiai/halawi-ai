@@ -25,6 +25,44 @@
 	let modelFilter = $state("");
 	const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ");
 	let queryTokens = $derived(normalize(modelFilter).trim().split(/\s+/).filter(Boolean));
+	
+	// Provider filter state
+	let selectedProvider = $state<string | null>(null);
+	
+	// Extract unique providers from models
+	let availableProviders = $derived.by(() => {
+		const providers = new Set<string>();
+		data.models.forEach((model) => {
+			if (model.providers && model.providers.length > 0) {
+				model.providers.forEach((p) => {
+					if (p.provider) providers.add(p.provider);
+				});
+			}
+		});
+		return Array.from(providers).sort();
+	});
+	
+	// Filter models by provider
+	let filteredModels = $derived.by(() => {
+		let models = data.models.filter((el) => !el.unlisted);
+		
+		// Apply provider filter
+		if (selectedProvider) {
+			models = models.filter((model) => {
+				return model.providers?.some((p) => p.provider === selectedProvider);
+			});
+		}
+		
+		// Apply search filter
+		if (queryTokens.length > 0) {
+			models = models.filter((el) => {
+				const haystack = normalize(`${el.id} ${el.name ?? ""} ${el.displayName ?? ""}`);
+				return queryTokens.every((q) => haystack.includes(q));
+			});
+		}
+		
+		return models;
+	});
 </script>
 
 <svelte:head>
@@ -61,23 +99,51 @@
 				>{/if}
 		</h2>
 
-		<!-- Filter input -->
-		<input
-			type="search"
-			bind:value={modelFilter}
-			placeholder="Search by name"
-			aria-label="Search models by name or id"
-			class="mt-4 w-full rounded-3xl border border-gray-300 bg-white px-5 py-2 text-[15px]
-				placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-300
-				dark:border-gray-700 dark:bg-gray-900 dark:focus:ring-gray-700"
-		/>
+		<!-- Filter inputs -->
+		<div class="mt-4 flex flex-col gap-3 sm:flex-row">
+			<input
+				type="search"
+				bind:value={modelFilter}
+				placeholder="Search by name"
+				aria-label="Search models by name or id"
+				class="flex-1 rounded-3xl border border-gray-300 bg-white px-5 py-2 text-[15px]
+					placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-300
+					dark:border-gray-700 dark:bg-gray-900 dark:focus:ring-gray-700"
+			/>
+			<select
+				bind:value={selectedProvider}
+				aria-label="Filter by provider"
+				class="rounded-3xl border border-gray-300 bg-white px-5 py-2 text-[15px]
+					focus:outline-none focus:ring-2 focus:ring-gray-300
+					dark:border-gray-700 dark:bg-gray-900 dark:focus:ring-gray-700"
+			>
+				<option value={null}>All Providers</option>
+				{#each availableProviders as provider}
+					<option value={provider}>{provider}</option>
+				{/each}
+			</select>
+		</div>
+		
+		{#if selectedProvider || modelFilter}
+			<div class="mt-3 flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+				<span>Showing {filteredModels.length} model{filteredModels.length !== 1 ? 's' : ''}</span>
+				{#if selectedProvider || modelFilter}
+					<button
+						type="button"
+						onclick={() => {
+							selectedProvider = null;
+							modelFilter = "";
+						}}
+						class="text-blue-600 hover:underline dark:text-blue-400"
+					>
+						Clear filters
+					</button>
+				{/if}
+			</div>
+		{/if}
+		
 		<div class="mt-6 grid grid-cols-1 gap-3 sm:gap-5 xl:grid-cols-2">
-			{#each data.models
-				.filter((el) => !el.unlisted)
-				.filter((el) => {
-					const haystack = normalize(`${el.id} ${el.name ?? ""} ${el.displayName ?? ""}`);
-					return queryTokens.every((q) => haystack.includes(q));
-				}) as model, index (model.id)}
+			{#each filteredModels as model, index (model.id)}
 				<a
 					href="{base}/models/{model.id}"
 					aria-label="Model card"

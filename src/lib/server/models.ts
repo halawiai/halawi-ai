@@ -7,6 +7,7 @@ import JSON5 from "json5";
 import { logger } from "$lib/server/logger";
 import { makeRouterEndpoint } from "$lib/server/router/endpoint";
 import { isGroqRegionalEndpoint, getGroqGlobalEndpoint } from "./utils/groqEndpointFallback";
+import { isModelEnabled, getModelCapabilities, inferProviderFromModelId } from "./featureConfig";
 
 type Optional<T, K extends keyof T> = Pick<Partial<T>, K> & Omit<T, K>;
 
@@ -424,12 +425,48 @@ const buildModels = async (baseUrlOverride?: string): Promise<ProcessedModel[]> 
 			modelsRaw.map((e) =>
 				processModel(e)
 					.then(addEndpoint)
-					.then(async (m) => ({
-						...m,
-						hasInferenceAPI: inferenceApiIds.includes(m.id ?? m.name),
-						// router decoration added later
-						isRouter: false as boolean,
-					}))
+					.then(async (m) => {
+						const modelId = m.id ?? m.name;
+
+						// Determine provider from API response or infer from model ID
+						const providers = m.providers as Array<{ provider?: string }> | undefined;
+						const provider =
+							providers?.[0]?.provider?.toLowerCase() || inferProviderFromModelId(modelId);
+
+						// Check feature config to determine if model should be enabled
+						const featureConfigEnabled = isModelEnabled(modelId, provider);
+
+						// Get model capabilities from feature config
+						const capabilities = getModelCapabilities(modelId);
+
+						// Apply feature config: feature config takes precedence
+						// If feature config says disabled, always set unlisted=true
+						// If feature config says enabled, respect any existing unlisted setting
+						let unlisted = m.unlisted;
+
+						if (!featureConfigEnabled) {
+							// Feature config says disabled - always hide
+							unlisted = true;
+							logger.debug(
+								{ modelId, provider, unlisted },
+								"[models] Model disabled by feature config"
+							);
+						} else if (featureConfigEnabled && unlisted === undefined) {
+							// Feature config says enabled and no override - show it
+							unlisted = false;
+						}
+						// If unlisted is already set and feature config says enabled, keep existing value
+
+						return {
+							...m,
+							unlisted,
+							hasInferenceAPI: inferenceApiIds.includes(modelId),
+							// router decoration added later
+							isRouter: false as boolean,
+							// Store capabilities if available
+							...(capabilities && { _capabilities: capabilities }),
+						};
+					})
 			)
 		);
 
